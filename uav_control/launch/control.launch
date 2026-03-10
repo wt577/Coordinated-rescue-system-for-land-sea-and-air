@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+    <launch>
+        <!-- UAV1 - 无人机 -->
+        <group ns="uav1">
+            <!-- MAVROS for UAV1 -->
+            <arg name="ID" value="0"/>
+            <arg name="fcu_url" default="/dev/ttyACM0:115200"/>
+            <include file="$(find mavros)/launch/px4.launch">
+                <arg name="fcu_url" value="$(arg fcu_url)"/>
+                <arg name="tgt_system" value="$(eval 1 + arg('ID'))"/>
+            </include>
+
+             <!-- UAV1 控制器节点 -->
+            <node pkg="uav_control" type="center.py" name="center" output="screen"/>   
+            
+        </group>
+    
+        <!-- UAV2 - 无人车 -->
+        <group ns="uav2">
+            <!-- MAVROS for UAV2 -->
+            <arg name="ID" value="2"/>
+            <arg name="fcu_url" default="/dev/ttyUSB1:57600"/>
+            <include file="$(find mavros)/launch/px4.launch">
+                <arg name="fcu_url" value="$(arg fcu_url)"/>
+                <arg name="tgt_system" value="$(eval 1 + arg('ID'))"/>
+            </include>
+    
+            <!-- UAV2 控制器节点 -->
+            <node pkg="uav_control" type="uav2.py" name="uav2" output="screen"/>
+    
+        </group>
+        
+        <!-- UAV3- 无人船 -->
+        <group ns="uav3">
+            <!-- MAVROS for UAV2 -->
+            <arg name="ID" value="1"/>
+            <arg name="fcu_url" default="/dev/ttyUSB0:57600"/>
+            <include file="$(find mavros)/launch/px4.launch">
+                <arg name="fcu_url" value="$(arg fcu_url)"/>
+                <arg name="tgt_system" value="$(eval 1 + arg('ID'))"/>
+            </include>
+    
+            <!-- UAV3 控制器节点 -->
+            <node pkg="uav_control" type="uav3d.py" name="uav3d" output="screen"/>
+    
+        </group> 
+        
+    <!-- 串口发送 - Jetson NX USB2口 -->
+    <node name="usart" pkg="uav_control" type="usart.py" output="screen">
+        <!-- 串口配置参数 - Jetson NX USB2口 -->
+        <param name="serial_port" value="/dev/ttyTHS1" /> 
+        <param name="baud_rate" value="115200" />           
+        
+        <!-- 检测参数 -->
+        <param name="detection_threshold" value="1" />      
+        <param name="timeout_seconds" value="2.0" />        
+        <param name="send_interval" value="2.0" />        
+        
+        <!-- 位置信息参数 -->
+        <param name="position_send_interval" value="2.0" />
+        <param name="status_send_interval" value="2.0" />  
+    </node>       
+    </launch>

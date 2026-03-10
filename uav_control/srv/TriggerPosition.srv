@@ -1,0 +1,6 @@
+# 请求部分（空）
+# 响应部分
+bool success
+float32 x
+float32 y
+float32 z

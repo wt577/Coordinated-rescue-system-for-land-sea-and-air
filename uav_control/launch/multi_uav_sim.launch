@@ -1,0 +1,72 @@
+<launch>
+    <!-- 1. 设置环境变量 -->
+    <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find px4)/Tools/sitl_gazebo/models"/>
+    <env name="GAZEBO_RESOURCE_PATH" value="$(find px4)/Tools/sitl_gazebo"/>
+    <env name="PX4_HOME_LAT" value="0.0"/>
+    <env name="PX4_HOME_LON" value="0.0"/>
+    <env name="PX4_HOME_ALT" value="0.0"/>
+    
+    <!-- 2. 启动Gazebo仿真环境 -->
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <arg name="world_name" value="$(find px4)/Tools/sitl_gazebo/worlds/empty.world"/>
+        <arg name="paused" value="false"/>
+        <arg name="gui" value="true"/>
+        <arg name="verbose" value="true"/>
+        <arg name="debug" value="false"/>
+        <arg name="extra_gazebo_args" value="--verbose"/>
+    </include>
+
+    <!-- 3. 无人机1 (ID=1) -->
+    <group ns="uav1">
+        <!-- 生成无人机模型 -->
+        <node name="spawn_uav1" pkg="gazebo_ros" type="spawn_model" 
+              args="-sdf -file $(find px4)/Tools/sitl_gazebo/models/iris/iris.sdf 
+                    -model iris_1 
+                    -x 0 -y 0 -z 0 -R 0 -P 0 -Y 0
+                    -robot_namespace uav1">
+            <env name="PX4_SIM_HOST" value="localhost"/>
+            <env name="PX4_SIM_BASE_UDP" value="14550"/>
+        </node>
+        
+        <!-- 启动PX4实例 -->
+        <node name="px4" pkg="px4" type="px4" output="screen" 
+              args="$(find px4)/ROMFS/px4fmu_common -s etc/init.d-posix/rcS -i 1">
+            <env name="PX4_SIM_MODEL" value="iris" />
+            <env name="PX4_ESTIMATOR" value="ekf2" />
+        </node>
+    </group>
+    
+    <!-- 4. 无人机2 (ID=2) -->
+    <group ns="uav2">
+        <!-- 生成无人机模型 -->
+        <node name="spawn_uav2" pkg="gazebo_ros" type="spawn_model" 
+              args="-sdf -file $(find px4)/Tools/sitl_gazebo/models/iris/iris.sdf 
+                    -model iris_2 
+                    -x 5 -y 0 -z 0 -R 0 -P 0 -Y 0
+                    -robot_namespace uav2">
+            <env name="PX4_SIM_HOST" value="localhost"/>
+            <env name="PX4_SIM_BASE_UDP" value="14560"/>
+        </node>
+        
+        <!-- 启动PX4实例 -->
+        <node name="px4" pkg="px4" type="px4" output="screen" 
+              args="$(find px4)/ROMFS/px4fmu_common -s etc/init.d-posix/rcS -i 2">
+            <env name="PX4_SIM_MODEL" value="iris" />
+        </node>
+    </group>
+    
+    <!-- 5. 启动MAVROS节点 -->
+    <include file="$(find uav_control)/launch/mavros_nodes.launch"/>
+    
+    <!-- 6. 启动控制节点 -->
+    <node name="uav1_controller" pkg="uav_control" type="uav1_controller.py" output="screen">
+        <param name="ns" value="uav1"/>
+    </node>
+    
+    <node name="uav2_controller" pkg="uav_control" type="uav2_controller.py" output="screen">
+        <param name="ns" value="uav2"/>
+    </node>
+    
+    <!-- 7. 启动地面站连接助手 -->
+    <node name="qgc_helper" pkg="uav_control" type="qgc_helper.py" output="screen"/>
+</launch>

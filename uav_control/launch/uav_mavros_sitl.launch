@@ -1,0 +1,107 @@
+<launch>
+    <!-- 实际硬件配置参数 -->
+    <arg name="est" default="ekf2" doc="估计器类型"/>
+    <arg name="use_sim_time" default="false" doc="是否使用仿真时间"/>
+    
+    <!-- 串口设备映射（根据实际硬件连接修改） -->
+    <arg name="uav1_port" default="/dev/ttyACM0" doc="无人机1串口设备"/>
+    <arg name="uav2_port" default="/dev/ttyUSB0" doc="无人车2串口设备"/>
+    <arg name="ugv3_port" default="/dev/ttyUSB1" doc="地面车辆串口设备"/>
+    
+    <!-- 波特率配置（统一设置为115200，需与飞控一致） -->
+    <arg name="baudrate" default="115200" doc="串口波特率"/>
+    
+    <!-- 全局参数设置 -->
+    <param name="use_sim_time" value="$(arg use_sim_time)"/>
+    
+    <!-- UAV1 (无人机) - 串口连接配置 -->
+    <group ns="uav1">
+        <arg name="ID" value="1"/>
+        <arg name="fcu_url" default="$(arg uav1_port):$(arg baudrate)" />
+        
+        <!-- MAVROS配置（串口连接模式，保持节点名称为mavros） -->
+        <node pkg="mavros" type="mavros_node" name="mavros" output="screen">
+            <param name="fcu_url" value="$(arg fcu_url)"/>
+            <param name="gcs_url" value="udp://@localhost:14551" />
+            <param name="target_system_id" value="1"/>
+            <param name="target_component_id" value="1"/>
+            <param name="conn_heartbeat" value="2.0"/>  <!-- 降低心跳间隔，提高实时性 -->
+            <param name="sys/disable_gps" value="false"/>
+        </node>
+        
+        <!-- 无人机控制器（保持原有配置） -->
+        <node pkg="uav_control" type="uav1_controller.py" name="uav_controller" output="screen">
+            <param name="radius" value="10.0"/>
+            <param name="height" value="3.0"/>
+            <param name="cruise_speed" value="0.5"/>
+            <param name="max_acceleration" value="0.2"/>
+            <param name="smooth_factor" value="0.3"/>
+        </node>
+    </group>
+    
+    <!-- UAV2 (地面车辆) - 串口连接配置 -->
+    <group ns="uav2">
+        <arg name="ID" value="2"/>
+        <arg name="fcu_url" default="$(arg uav2_port):$(arg baudrate)" />
+        
+        <node pkg="mavros" type="mavros_node" name="mavros" output="screen">
+            <param name="fcu_url" value="$(arg fcu_url)"/>
+            <param name="gcs_url" value="udp://@localhost:14552" />
+            <param name="target_system_id" value="2"/>
+            <param name="target_component_id" value="1"/>
+            <param name="conn_heartbeat" value="2.0"/>
+            <param name="sys/disable_gps" value="false"/>
+        </node>
+        
+        <!-- 目标点监控节点（保持原有配置） -->
+        <node pkg="uav_control" type="uav2_controller.py" name="uav_controller" output="screen">
+            <remap from="current_pose" to="/uav2/mavros/local_position/pose"/>
+            <remap from="target_reached" to="/uav1/position2"/>
+            <remap from="cmd_vel" to="/ugv2/mavros/setpoint_velocity/cmd_vel_unstamped"/>
+            <param name="waypoint_threshold" value="0.5"/>
+            <param name="check_frequency" value="10"/>
+        </node>
+    </group>
+    
+    <!-- UGV3 (地面车辆) - 串口连接配置 -->
+    <group ns="ugv3">
+        <arg name="ID" value="3"/>
+        <arg name="fcu_url" default="$(arg ugv3_port):$(arg baudrate)" />
+        
+        <node pkg="mavros" type="mavros_node" name="mavros" output="screen">
+            <param name="fcu_url" value="$(arg fcu_url)"/>
+            <param name="gcs_url" value="udp://@localhost:14553" />
+            <param name="target_system_id" value="3"/>
+            <param name="target_component_id" value="1"/>
+            <param name="conn_heartbeat" value="2.0"/>
+            <param name="sys/disable_gps" value="false"/>
+        </node>
+        
+        <!-- 控制节点（保持原有配置） -->
+        <node pkg="uav_control" type="uav0_controller.py" name="uav_controller" output="screen">
+            <remap from="current_pose" to="/ugv3/mavros/local_position/pose"/>
+            <remap from="target_pose" to="/uav1/position1"/>
+            <remap from="cmd_vel" to="/ugv3/mavros/setpoint_velocity/cmd_vel_unstamped"/>
+            <param name="max_linear_velocity" value="1.0"/>
+            <param name="max_angular_velocity" value="0.5"/>
+            <param name="control_frequency" value="20"/>
+        </node>
+    </group>
+    
+    <!-- 系统监控节点（保持原有配置） -->
+    <node pkg="rosmon" type="rosmon" name="rosmon" output="screen">
+        <rosparam file="$(find uav_control)/config/rosmon.yaml"/>
+    </node>
+    
+    <!-- 记录关键话题（保持原有配置） -->
+    <node pkg="rosbag" type="record" name="rosbag_record" output="screen"
+          args="-O uav_mission_$(anon id) --duration=3600
+                /uav1/mavros/local_position/pose
+                /uav2/mavros/local_position/pose
+                /ugv3/mavros/local_position/pose
+                /uav1/position1
+                /uav1/position2
+                /ugv3/mavros/setpoint_velocity/cmd_vel_unstamped">
+    </node>
+</launch>
+

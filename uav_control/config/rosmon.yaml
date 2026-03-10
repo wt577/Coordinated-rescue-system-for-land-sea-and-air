@@ -1,0 +1,17 @@
+# rosmon 配置文件 - 用于监控节点状态
+nodes:
+  uav1_controller:
+    package: uav_control
+    type: uav1_controller.py
+    namespace: uav1
+    required: true
+  uav2_controller:
+    package: uav_control
+    type: uav2_controller.py
+    namespace: uav2
+    required: true
+  ugv0_controller:
+    package: uav_control
+    type: uav0_controller.py
+    namespace: ugv0
+    required: true

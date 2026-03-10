@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- 串口YOLO发送器节点 - Jetson NX USB2口版本 -->
+    <node name="usart" pkg="uav_control" type="usart.py" output="screen">
+        <!-- 串口配置参数 - Jetson NX USB2口 -->
+        <param name="serial_port" value="/dev/ttyUSB2" />  <!-- Jetson NX USB2口对应ttyUSB1 -->
+        <param name="baud_rate" value="115200" />            <!-- 波特率 -->
+        
+        <!-- 检测参数 -->
+        <param name="detection_threshold" value="1" />      <!-- 检测阈值，需要连续检测到多少次才发送命令 -->
+        <param name="timeout_seconds" value="5.0" />        <!-- 超时时间，超过此时间未检测到则重置计数器 -->
+        <param name="send_interval" value="3.0" />          <!-- 发送间隔，避免重复发送 -->
+        
+        <!-- 位置信息参数 -->
+        <param name="position_send_interval" value="3.0" /> <!-- 位置信息发送间隔，每秒发送一次 -->
+        <param name="status_send_interval" value="3.0" />   <!-- 状态信息发送间隔 -->
+    </node>
+</launch> 
